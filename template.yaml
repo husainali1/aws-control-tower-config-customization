@@ -2,11 +2,11 @@ AWSTemplateFormatVersion: '2010-09-09'
 Description: 'AWS CloudFormation Template to update config recorder settings in child accounts created by ControlTower.'
 Parameters:
 
-  ExcludedAccounts:
-    Description: Excluded Accounts list. This list should contain Management account, Log Archive and Audit accounts at the minimum
+  IncludedAccounts:
+    Description: Included Accounts list for customization. This list should not contain Management account, Log Archive and Audit accounts.
     Default: "['111111111111', '222222222222', '333333333333']"
     MaxLength: '2000'
-    MinLength: '36'
+    MinLength: '10'
     Type: String
 
   ConfigRecorderExcludedResourceTypes:
@@ -17,6 +17,11 @@ Parameters:
   CloudFormationVersion:
     Type: String
     Default: 2
+
+  LambdaS3Bucket:
+    Type: String
+    MaxLength: '2000'
+    MinLength: '3'
 
 Resources:
     LambdaZipsBucket:
@@ -46,7 +51,7 @@ Resources:
             ReservedConcurrentExecutions: 1
             Environment:
                 Variables:
-                    EXCLUDED_ACCOUNTS: !Ref ExcludedAccounts
+                    INCLUDED_ACCOUNTS: !Ref IncludedAccounts
                     LOG_LEVEL: INFO
                     SQS_URL: !Ref SQSConfigRecorder
 
@@ -189,6 +194,7 @@ Resources:
 
     ProducerLambdaTrigger:
       Type: 'Custom::ExecuteLambda'
+      DependsOn: ProducerLambda
       Properties:
         ServiceToken: !GetAtt "ProducerLambda.Arn"
         FunctionName: !Ref ProducerLambda
@@ -202,7 +208,7 @@ Resources:
         #update this to match AWS public bucket
         #s3://marketplace-sa-resources/ct-blogs-content/ct_configrecorder_override_consumer_v2.zip
         #s3://marketplace-sa-resources/ct-blogs-content/ct_configrecorder_override_producer.zip
-        SourceBucket: marketplace-sa-resources
+        SourceBucket: !Ref 'LambdaS3Bucket'
         Prefix: ct-blogs-content/
         Objects:
           - 'ct_configrecorder_override_producer.zip'
@@ -230,8 +236,9 @@ Resources:
                   Action:
                     - s3:GetObject
                     - s3:GetObjectTagging
-                  Resource:
-                    - !Sub 'arn:${AWS::Partition}:s3:::marketplace-sa-resources/ct-blogs-content/*'
+                  Resource: !Sub
+                    - 'arn:${AWS::Partition}:s3:::${LambdaBucket}/ct-blogs-content/*'
+                    - LambdaBucket: !Ref 'LambdaS3Bucket'
                 - Effect: Allow
                   Action:
                     - s3:PutObject

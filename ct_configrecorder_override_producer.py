@@ -1,4 +1,5 @@
-# #
+
+#
 # Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 # SPDX-License-Identifier: MIT-0
 #
@@ -33,8 +34,10 @@ def lambda_handler(event, context):
         logging.info('Event Data: ')
         logging.info(event)
         sqs_url = os.getenv('SQS_URL')
-        excluded_accounts = os.getenv('EXCLUDED_ACCOUNTS')
-        logging.info(f'Excluded Accounts: {excluded_accounts}')
+        # excluded_accounts = os.getenv('EXCLUDED_ACCOUNTS')
+        # logging.info(f'Excluded Accounts: {excluded_accounts}')
+        included_accounts = os.getenv('INCLUDED_ACCOUNTS')
+        logging.info(f'Included Accounts: {included_accounts}')
         sqs_client = boto3.client('sqs')
         
         # Check if the lambda was trigerred from EventBridge.
@@ -54,19 +57,19 @@ def lambda_handler(event, context):
         if event_source == 'aws.controltower' and event_name == 'UpdateManagedAccount':    
             account = event['detail']['serviceEventDetails']['updateManagedAccountStatus']['account']['accountId']
             logging.info(f'overriding config recorder for SINGLE account: {account}')
-            override_config_recorder(excluded_accounts, sqs_url, account, 'controltower')
+            override_config_recorder(included_accounts, sqs_url, account, 'controltower')
         elif event_source == 'aws.controltower' and event_name == 'CreateManagedAccount':  
             account = event['detail']['serviceEventDetails']['createManagedAccountStatus']['account']['accountId']
             logging.info(f'overriding config recorder for SINGLE account: {account}')
-            override_config_recorder(excluded_accounts, sqs_url, account, 'controltower')
+            override_config_recorder(included_accounts, sqs_url, account, 'controltower')
         elif event_source == 'aws.controltower' and event_name == 'UpdateLandingZone':
             logging.info('overriding config recorder for ALL accounts due to UpdateLandingZone event')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'controltower')
+            override_config_recorder(included_accounts, sqs_url, '', 'controltower')
         elif ('LogicalResourceId' in event) and (event['RequestType'] == 'Create'):
             logging.info('CREATE CREATE')
             logging.info(
                 'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'Create')
+            override_config_recorder(included_accounts, sqs_url, '', 'Create')
             response = {}
             ## Send signal back to CloudFormation after the first run
             cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")
@@ -74,9 +77,9 @@ def lambda_handler(event, context):
             logging.info('Update Update')
             logging.info(
                 'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'Update')
+            override_config_recorder(included_accounts, sqs_url, '', 'Update')
             response = {}
-            update_excluded_accounts(excluded_accounts,sqs_url)
+            # update_excluded_accounts([],sqs_url)
             
             ## Send signal back to CloudFormation after the first run
             cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")    
@@ -84,7 +87,7 @@ def lambda_handler(event, context):
             logging.info('DELETE DELETE')
             logging.info(
                 'overriding config recorder for ALL accounts because of first run after function deployment from CloudFormation')
-            override_config_recorder(excluded_accounts, sqs_url, '', 'Delete')
+            override_config_recorder(included_accounts, sqs_url, '', 'Delete')
             response = {}
             ## Send signal back to CloudFormation after the final run
             cfnresource.send(event, context, cfnresource.SUCCESS, response, "CustomResourcePhysicalID")
@@ -104,7 +107,7 @@ def lambda_handler(event, context):
         logging.exception(f'{exception_type}: {exception_message}')
 
 
-def override_config_recorder(excluded_accounts, sqs_url, account, event):
+def override_config_recorder(included_accounts, sqs_url, account, event):
     
     try:
         client = boto3.client('cloudformation')
@@ -124,19 +127,19 @@ def override_config_recorder(excluded_accounts, sqs_url, account, event):
             for item in page['Summaries']:
                 account = item['Account']
                 region = item['Region']
-                send_message_to_sqs(event, account, region, excluded_accounts, sqs_client, sqs_url)
+                send_message_to_sqs(event, account, region, included_accounts, sqs_client, sqs_url)
                     
     except Exception as e:
         exception_type = e.__class__.__name__
         exception_message = str(e)
         logging.exception(f'{exception_type}: {exception_message}')
 
-def send_message_to_sqs(event, account, region, excluded_accounts, sqs_client, sqs_url):
+def send_message_to_sqs(event, account, region, included_accounts, sqs_client, sqs_url):
     
     try:
 
         #Proceed only if the account is not excluded
-        if account not in excluded_accounts:
+        if account in included_accounts:
         
             #construct sqs message
             sqs_msg = f'{{"Account": "{account}", "Region": "{region}", "Event": "{event}"}}'
