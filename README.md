@@ -13,10 +13,11 @@ This is a modified solution that accepts an include account list parameter for c
 3. Upload the 2 .zip files from this repo to the S3 bucket folder from step #2.
 4. Delpoy the CloudFormation template.yaml file.
 5. Template Parameters:
-    a. CloudFormationVersion: Increment version when deploying an update. default is 1 for teh initial deploymemt.
-    b. IncludedAccounts: List of accounts where config customization is desired.
-    c. ConfigRecorderExcludedResourceTypes: List of all resource types to be excluded from Config Recorder.
-    d. LambdaS3Bucket: Name of the S3 bucket where lambda zips are uploaded. Do not enter the folder prefix.
+
+	- **CloudFormationVersion**: Increment version when deploying an update. default is 1 for teh initial deploymemt.
+	- **IncludedAccounts**: List of accounts where config customization is desired.
+	- **ConfigRecorderExcludedResourceTypes**: List of all resource types to be excluded from Config Recorder.
+	- **LambdaS3Bucket**: Name of the S3 bucket where lambda zips are uploaded. Do not enter the folder prefix.
 
 
 ## Security
