@@ -14,10 +14,10 @@ This is a modified solution that accepts an include account list parameter for c
 4. Delpoy the CloudFormation template.yaml file.
 5. Template Parameters:
 
-	- **CloudFormationVersion**: Increment version when deploying an update. default is 1 for teh initial deploymemt.
+	- **CloudFormationVersion**: Increment version when deploying an update. default value is 1 for the initial deployment.
 	- **IncludedAccounts**: List of accounts where config customization is desired.
 	- **ConfigRecorderExcludedResourceTypes**: List of all resource types to be excluded from Config Recorder.
-	- **LambdaS3Bucket**: Name of the S3 bucket where lambda zips are uploaded. Do not enter the folder prefix.
+	- **LambdaS3Bucket**: Name of the S3 bucket where lambda zips are uploaded. Do not add the folder prefix.
 
 
 ## Security
